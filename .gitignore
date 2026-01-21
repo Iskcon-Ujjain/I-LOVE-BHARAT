@@ -1,0 +1,13 @@
+Dependencies (This stops the massive node_modules folder from uploading)
+node_modules
+Build
+output
+dist
+buildLogs
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+System Files.DS_Store
+Thumbs.db
+Env variables (Protects API keys if you use them here)
+.env
