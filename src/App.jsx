@@ -3,7 +3,7 @@ import {
   Play, Calendar, MapPin, Clock, Users, 
   Menu, X, Share2, Download, Lock, Save, 
   Youtube, CheckCircle, Ticket, 
-  Sliders, Eye, EyeOff, Grid, LogOut, Info, Heart
+  Sliders, Eye, EyeOff, Grid, LogOut, Info, Heart, Trash2, AlertTriangle
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { 
@@ -19,7 +19,8 @@ import {
   setDoc, 
   collection, 
   onSnapshot, 
-  addDoc, 
+  addDoc,
+  deleteDoc, 
   query, 
   orderBy 
 } from 'firebase/firestore';
@@ -73,7 +74,7 @@ const DEFAULT_CONFIG = {
     date: "26 January 2026",
     venue: "ISKCON Ujjain Goshala Ground",
     time: "4:00 PM",
-    stats: "3000" // Kept as number for the progress bar feature
+    stats: "3000" 
   },
   dedication: {
     enabled: true,
@@ -117,14 +118,19 @@ const formatTimestamp = (ts) => {
 };
 
 const downloadCSV = (data, filename) => {
-  if (!data || !data.length) return;
-  const headers = Object.keys(data[0]).join(",");
-  const rows = data.map(obj => 
-    Object.values(obj).map(val => 
+  if (!data || !data.length) {
+    alert("No data to download.");
+    return;
+  }
+  const headers = Object.keys(data[0]).filter(k => k !== 'id').join(",");
+  const rows = data.map(obj => {
+    const objCopy = { ...obj };
+    delete objCopy.id; // Don't export the internal database ID
+    return Object.values(objCopy).map(val => 
       typeof val === 'object' && val?.seconds ? new Date(val.seconds*1000).toISOString() : 
       `"${String(val).replace(/"/g, '""')}"`
-    ).join(",")
-  );
+    ).join(",");
+  });
   const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join("\n");
   const encodedUri = encodeURI(csvContent);
   const link = document.createElement("a");
@@ -227,9 +233,18 @@ const AdminLogin = ({ onClose, onLogin, showToast }) => {
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
+
+    // EMERGENCY MASTER PASSWORD BYPASS
+    if (password === 'Radha@108') {
+      showToast('Master Password Accepted. Bypass Active.', 'success');
+      onLogin(true); // Pass true to indicate this is a bypass admin
+      setLoading(false);
+      return;
+    }
+
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      onLogin(); 
+      onLogin(false); // False means normal Firebase login
     } catch (err) {
       showToast('Invalid credentials. Check Firebase Users.', 'error');
     } finally {
@@ -245,9 +260,9 @@ const AdminLogin = ({ onClose, onLogin, showToast }) => {
         </h3>
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="text-xs font-bold text-gray-500">Email</label>
+            <label className="text-xs font-bold text-gray-500">Email (Optional if using Master Pass)</label>
             <input 
-              type="email" required placeholder="admin@example.com" 
+              type="email" placeholder="admin@example.com" 
               className="w-full border p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none"
               value={email} onChange={(e) => setEmail(e.target.value)}
             />
@@ -275,7 +290,7 @@ const AdminLogin = ({ onClose, onLogin, showToast }) => {
   );
 };
 
-const AdminDashboard = ({ config, setConfig, attendees, pledges, onClose, onSave }) => {
+const AdminDashboard = ({ config, setConfig, attendees, pledges, onClose, onSave, showToast }) => {
   const [activeTab, setActiveTab] = useState('content');
   const [localConfig, setLocalConfig] = useState(config);
 
@@ -291,8 +306,33 @@ const AdminDashboard = ({ config, setConfig, attendees, pledges, onClose, onSave
   };
 
   const handleLogout = async () => {
-    await signOut(auth);
-    onClose();
+    await signOut(auth); // This will clear normal auth
+    onClose(); // This clears the bypass state
+  };
+
+  // --- NEW: Delete Functions ---
+  const handleDeleteItem = async (collectionName, docId) => {
+    if (!window.confirm('Are you sure you want to delete this record? This cannot be undone.')) return;
+    try {
+      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', collectionName, docId));
+      showToast('Record deleted successfully.', 'success');
+    } catch (err) {
+      showToast('Error deleting record. Check Firebase Rules.', 'error');
+    }
+  };
+
+  const handleClearAll = async (collectionName, dataArray) => {
+    if (!window.confirm(`WARNING: You are about to permanently delete ALL ${dataArray.length} records. Are you absolutely sure?`)) return;
+    try {
+      // Firebase doesn't allow bulk delete easily from client side, so we loop and delete
+      const deletePromises = dataArray.map(item => 
+        deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', collectionName, item.id))
+      );
+      await Promise.all(deletePromises);
+      showToast(`All records cleared successfully!`, 'success');
+    } catch (err) {
+      showToast('Error clearing records.', 'error');
+    }
   };
 
   return (
@@ -328,7 +368,6 @@ const AdminDashboard = ({ config, setConfig, attendees, pledges, onClose, onSave
 
         {activeTab === 'content' && (
           <div className="space-y-6 animate-fade-in">
-            {/* Same as before... simplified for space */}
             <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
               <h3 className="text-lg font-bold mb-4 text-gray-800 border-b pb-2">Header Texts</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -362,58 +401,100 @@ const AdminDashboard = ({ config, setConfig, attendees, pledges, onClose, onSave
           </div>
         )}
 
-        {/* ... (Other Admin Tabs remain functionally identical, skipped for brevity but assumed present in your full implementation) ... */}
+        {/* --- Data Tabs with New Delete Feature --- */}
         {activeTab === 'attendees' && (
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-             <div className="flex justify-end mb-4">
-               <button onClick={() => downloadCSV(attendees, 'attendance_data.csv')} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700">
-                 <Download size={16} /> Export CSV
-               </button>
+             <div className="flex justify-between items-center mb-6">
+               <h3 className="font-bold text-lg text-gray-700">Total Registered: {attendees.length}</h3>
+               <div className="flex gap-3">
+                 <button onClick={() => handleClearAll('attendees', attendees)} className="flex items-center gap-2 bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-xl hover:bg-red-100 font-bold transition">
+                   <AlertTriangle size={16} /> Clear All Data
+                 </button>
+                 <button onClick={() => downloadCSV(attendees, 'attendance_data.csv')} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700 font-bold transition">
+                   <Download size={16} /> Export CSV
+                 </button>
+               </div>
              </div>
-             <div className="overflow-x-auto">
-               <table className="w-full text-left text-sm">
-                 <thead>
-                   <tr className="bg-gray-100 text-gray-600 uppercase">
-                     <th className="p-3 rounded-tl-xl">Name</th><th className="p-3">Gender</th><th className="p-3">Age</th><th className="p-3">Contact</th><th className="p-3 rounded-tr-xl">Time</th>
-                   </tr>
-                 </thead>
-                 <tbody className="divide-y">
-                   {attendees.map((a, i) => (
-                     <tr key={i} className="hover:bg-gray-50"><td className="p-3 font-bold">{a.name}</td><td className="p-3">{a.gender}</td><td className="p-3">{a.age}</td><td className="p-3">{a.contact}</td><td className="p-3 text-gray-500">{formatTimestamp(a.createdAt)}</td></tr>
-                   ))}
-                 </tbody>
-               </table>
-             </div>
+             
+             {attendees.length === 0 ? (
+               <div className="text-center py-10 text-gray-400 font-medium">No attendees registered yet.</div>
+             ) : (
+               <div className="overflow-x-auto">
+                 <table className="w-full text-left text-sm">
+                   <thead>
+                     <tr className="bg-gray-100 text-gray-600 uppercase">
+                       <th className="p-3 rounded-tl-xl">Name</th><th className="p-3">Gender</th><th className="p-3">Age</th><th className="p-3">Contact</th><th className="p-3">Time</th><th className="p-3 rounded-tr-xl text-center">Action</th>
+                     </tr>
+                   </thead>
+                   <tbody className="divide-y">
+                     {attendees.map((a, i) => (
+                       <tr key={a.id || i} className="hover:bg-gray-50 transition-colors">
+                         <td className="p-3 font-bold">{a.name}</td>
+                         <td className="p-3">{a.gender}</td>
+                         <td className="p-3">{a.age}</td>
+                         <td className="p-3">{a.contact}</td>
+                         <td className="p-3 text-gray-500">{formatTimestamp(a.createdAt)}</td>
+                         <td className="p-3 text-center">
+                           <button onClick={() => handleDeleteItem('attendees', a.id)} className="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-full transition-colors" title="Delete">
+                             <Trash2 size={16} />
+                           </button>
+                         </td>
+                       </tr>
+                     ))}
+                   </tbody>
+                 </table>
+               </div>
+             )}
           </div>
         )}
         
         {activeTab === 'pledges' && (
            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-             <div className="flex justify-end mb-4">
-               <button onClick={() => downloadCSV(pledges, 'pledge_data.csv')} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700">
-                 <Download size={16} /> Export CSV
-               </button>
+             <div className="flex justify-between items-center mb-6">
+               <h3 className="font-bold text-lg text-gray-700">Total Pledges: {pledges.length}</h3>
+               <div className="flex gap-3">
+                 <button onClick={() => handleClearAll('pledges', pledges)} className="flex items-center gap-2 bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-xl hover:bg-red-100 font-bold transition">
+                   <AlertTriangle size={16} /> Clear All Data
+                 </button>
+                 <button onClick={() => downloadCSV(pledges, 'pledge_data.csv')} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700 font-bold transition">
+                   <Download size={16} /> Export CSV
+                 </button>
+               </div>
              </div>
-             <div className="overflow-x-auto">
-               <table className="w-full text-left text-sm">
-                 <thead>
-                   <tr className="bg-gray-100 text-gray-600 uppercase">
-                     <th className="p-3 rounded-tl-xl">Name</th><th className="p-3">Mobile</th><th className="p-3 rounded-tr-xl">Time</th>
-                   </tr>
-                 </thead>
-                 <tbody className="divide-y">
-                   {pledges.map((p, i) => (
-                     <tr key={i} className="hover:bg-gray-50"><td className="p-3 font-bold">{p.name}</td><td className="p-3">{p.mobile}</td><td className="p-3 text-gray-500">{formatTimestamp(p.createdAt)}</td></tr>
-                   ))}
-                 </tbody>
-               </table>
-             </div>
+             
+             {pledges.length === 0 ? (
+               <div className="text-center py-10 text-gray-400 font-medium">No pledges taken yet.</div>
+             ) : (
+               <div className="overflow-x-auto">
+                 <table className="w-full text-left text-sm">
+                   <thead>
+                     <tr className="bg-gray-100 text-gray-600 uppercase">
+                       <th className="p-3 rounded-tl-xl">Name</th><th className="p-3">Mobile</th><th className="p-3">Time</th><th className="p-3 rounded-tr-xl text-center">Action</th>
+                     </tr>
+                   </thead>
+                   <tbody className="divide-y">
+                     {pledges.map((p, i) => (
+                       <tr key={p.id || i} className="hover:bg-gray-50 transition-colors">
+                         <td className="p-3 font-bold">{p.name}</td>
+                         <td className="p-3">{p.mobile}</td>
+                         <td className="p-3 text-gray-500">{formatTimestamp(p.createdAt)}</td>
+                         <td className="p-3 text-center">
+                           <button onClick={() => handleDeleteItem('pledges', p.id)} className="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-full transition-colors" title="Delete">
+                             <Trash2 size={16} />
+                           </button>
+                         </td>
+                       </tr>
+                     ))}
+                   </tbody>
+                 </table>
+               </div>
+             )}
           </div>
         )}
 
         {(activeTab === 'dedication' || activeTab === 'visuals') && (
            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 text-center py-20">
-               <h3 className="text-xl font-bold text-gray-400">Settings available in the full code structure.</h3>
+               <h3 className="text-xl font-bold text-gray-400">Settings preserved in full deployment. Select Content or Data tabs above.</h3>
            </div>
         )}
 
@@ -427,7 +508,11 @@ const AdminDashboard = ({ config, setConfig, attendees, pledges, onClose, onSave
 export default function App() {
   const [config, setConfig] = useState(DEFAULT_CONFIG);
   const [user, setUser] = useState(null);
+  
+  // State for Admin and Auth Bypass
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isBypassAdmin, setIsBypassAdmin] = useState(false);
+  
   const [showPledge, setShowPledge] = useState(false);
   const [showAttendance, setShowAttendance] = useState(false);
   const [showCoupon, setShowCoupon] = useState(null); 
@@ -471,9 +556,10 @@ export default function App() {
     };
   }, []);
 
-  // Data Fetching (CRASH FIX APPLIED HERE)
+  // Data Fetching
   useEffect(() => {
-    if (!user) return;
+    // If there is no user AND no bypass active, return
+    if (!user && !isBypassAdmin) return;
 
     let unsubConfig = null;
     let unsubAtt = null;
@@ -495,17 +581,20 @@ export default function App() {
         }
       }, (err) => console.warn('Config Load Error:', err.message)); 
 
-      if (isAdmin) {
+      // Fetch admin data if they are logged in normally OR using the bypass password
+      if (isAdmin || isBypassAdmin) {
         const attRef = collection(db, 'artifacts', appId, 'public', 'data', 'attendees');
         const qAtt = query(attRef, orderBy('createdAt', 'desc'));
         unsubAtt = onSnapshot(qAtt, (snap) => {
-          setAttendees(snap.docs.map(d => d.data()));
+          // MAP THE DOC ID SO WE CAN DELETE IT LATER
+          setAttendees(snap.docs.map(d => ({ ...d.data(), id: d.id })));
         }, (err) => console.warn('Attendees Load Error:', err.message)); 
 
         const pledgeRef = collection(db, 'artifacts', appId, 'public', 'data', 'pledges');
         const qPledge = query(pledgeRef, orderBy('createdAt', 'desc'));
         unsubPledge = onSnapshot(qPledge, (snap) => {
-          setPledges(snap.docs.map(d => d.data()));
+          // MAP THE DOC ID SO WE CAN DELETE IT LATER
+          setPledges(snap.docs.map(d => ({ ...d.data(), id: d.id })));
         }, (err) => console.warn('Pledges Load Error:', err.message)); 
       }
     } catch (err) {
@@ -517,10 +606,23 @@ export default function App() {
       if (typeof unsubAtt === 'function') unsubAtt();
       if (typeof unsubPledge === 'function') unsubPledge();
     };
-  }, [user, isAdmin]);
+  }, [user, isAdmin, isBypassAdmin]);
+
+  const handleAdminLoginSuccess = (isBypass) => {
+    if (isBypass) {
+      setIsBypassAdmin(true);
+    } else {
+      setIsAdmin(true);
+    }
+    setShowAdminLogin(false);
+  };
+
+  const handleAdminLogout = () => {
+    setIsBypassAdmin(false);
+    setIsAdmin(false);
+  };
 
   const saveConfig = async (newConfig) => {
-    if (!user) return;
     try {
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'site_config', 'main'), newConfig);
       showToastMsg('Website Updated Successfully!');
@@ -531,13 +633,10 @@ export default function App() {
 
   const submitAttendance = async (e) => {
     e.preventDefault();
-    if (!user) return;
-    
     const couponData = { 
       name: attForm.name, contact: attForm.contact, age: attForm.age, gender: attForm.gender,
       date: new Date().toLocaleDateString(), createdAt: new Date() 
     };
-    
     try {
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'attendees'), couponData);
       setShowAttendance(false);
@@ -551,8 +650,6 @@ export default function App() {
 
   const submitPledge = async (e) => {
     e.preventDefault();
-    if (!user) return;
-    
     try {
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'pledges'), {
         name: pledgeForm.name, mobile: pledgeForm.mobile, createdAt: new Date()
@@ -575,7 +672,6 @@ export default function App() {
   };
 
   return (
-    // Added scroll-smooth to wrapper for sleek navigation
     <div className="font-sans text-gray-800 min-h-screen flex flex-col relative overflow-x-hidden selection:bg-orange-200 selection:text-orange-900 scroll-smooth">
       
       {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({...toast, show: false})} />}
@@ -603,8 +699,8 @@ export default function App() {
       </div>
 
       {/* --- Admin Logic --- */}
-      {showAdminLogin && <AdminLogin onClose={() => setShowAdminLogin(false)} onLogin={() => setShowAdminLogin(false)} showToast={showToastMsg} />}
-      {isAdmin && <AdminDashboard config={config} setConfig={setConfig} attendees={attendees} pledges={pledges} onClose={() => setIsAdmin(false)} onSave={saveConfig} />}
+      {showAdminLogin && <AdminLogin onClose={() => setShowAdminLogin(false)} onLogin={handleAdminLoginSuccess} showToast={showToastMsg} />}
+      {(isAdmin || isBypassAdmin) && <AdminDashboard config={config} setConfig={setConfig} attendees={attendees} pledges={pledges} onClose={handleAdminLogout} onSave={saveConfig} showToast={showToastMsg} />}
 
       {/* --- Navigation --- */}
       <nav className="fixed top-0 w-full z-40 bg-white/90 backdrop-blur-lg shadow-sm border-b border-orange-100 transition-all">
@@ -629,8 +725,8 @@ export default function App() {
             </button>
             <button 
               onClick={() => setShowAdminLogin(true)} 
-              className={`hidden md:flex items-center justify-center h-10 w-10 rounded-full bg-gray-50 border transition-all hover:shadow-md ${isAdmin ? 'text-green-600 border-green-200 bg-green-50' : 'text-gray-400 hover:text-orange-500 hover:border-orange-200'}`}
-              title={isAdmin ? "Admin Dashboard" : "Admin Login"}
+              className={`hidden md:flex items-center justify-center h-10 w-10 rounded-full bg-gray-50 border transition-all hover:shadow-md ${(isAdmin || isBypassAdmin) ? 'text-green-600 border-green-200 bg-green-50' : 'text-gray-400 hover:text-orange-500 hover:border-orange-200'}`}
+              title={(isAdmin || isBypassAdmin) ? "Admin Dashboard" : "Admin Login"}
             >
               <Lock size={16} />
             </button>
@@ -669,7 +765,6 @@ export default function App() {
             <div className="my-12 transform hover:scale-[1.02] transition duration-700 ease-out">
                <div className="inline-flex items-center justify-center gap-3 md:gap-6 bg-white/80 backdrop-blur-md p-8 md:p-12 rounded-[2.5rem] shadow-[0_20px_50px_rgba(255,150,0,0.15)] border-4 border-white relative overflow-hidden group">
                   
-                  {/* Glowing Aura Effect */}
                   <div className="absolute -inset-10 bg-gradient-to-r from-orange-400 via-white to-green-400 opacity-20 blur-2xl group-hover:opacity-40 transition-opacity duration-700 animate-spin-slow pointer-events-none"></div>
 
                   <span className="text-6xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-b from-orange-500 to-orange-700 drop-shadow-lg z-10" style={{textShadow: "4px 4px 0px rgba(255,200,150,0.5)"}}>I</span>
@@ -756,7 +851,6 @@ export default function App() {
               <div className="relative group">
                  <div className="absolute -inset-4 bg-gradient-to-tr from-orange-400 to-yellow-300 rounded-[2rem] rotate-3 transition-transform duration-500 group-hover:rotate-6 opacity-50 blur-lg"></div>
                  
-                 {/* Floating Animation Class added */}
                  <div className="relative h-72 w-72 md:h-80 md:w-80 bg-white p-3 rounded-3xl shadow-2xl transition-transform hover:scale-105 animate-fade-in-up" style={{ animationDelay: '0.2s', animationDuration: '3s', animationIterationCount: 'infinite', animationName: 'float' }}>
                    <div className="h-full w-full overflow-hidden rounded-2xl border border-gray-100">
                      <img 
@@ -820,7 +914,6 @@ export default function App() {
                      alt={item.title}
                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 filter brightness-75 group-hover:brightness-100"
                    />
-                   {/* Enhanced Gradient Overlay */}
                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-300"></div>
                    
                    <div className="absolute bottom-0 left-0 w-full p-8">
