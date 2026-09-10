@@ -125,7 +125,7 @@ const downloadCSV = (data, filename) => {
   const headers = Object.keys(data[0]).filter(k => k !== 'id').join(",");
   const rows = data.map(obj => {
     const objCopy = { ...obj };
-    delete objCopy.id; // Don't export the internal database ID
+    delete objCopy.id; 
     return Object.values(objCopy).map(val => 
       typeof val === 'object' && val?.seconds ? new Date(val.seconds*1000).toISOString() : 
       `"${String(val).replace(/"/g, '""')}"`
@@ -234,19 +234,28 @@ const AdminLogin = ({ onClose, onLogin, showToast }) => {
     e.preventDefault();
     setLoading(true);
 
+    // .trim() removes any accidental spaces you typed at the end of the password
+    const safePassword = password.trim(); 
+
     // EMERGENCY MASTER PASSWORD BYPASS
-    if (password === 'Radha@108') {
+    if (safePassword === 'Radha@108') {
       showToast('Master Password Accepted. Bypass Active.', 'success');
       onLogin(true); // Pass true to indicate this is a bypass admin
       setLoading(false);
       return;
     }
 
+    if (!email.trim()) {
+      showToast('Email is required if you are not using the Master Password.', 'error');
+      setLoading(false);
+      return;
+    }
+
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, email, safePassword);
       onLogin(false); // False means normal Firebase login
     } catch (err) {
-      showToast('Invalid credentials. Check Firebase Users.', 'error');
+      showToast('Incorrect Password or Access Denied.', 'error');
     } finally {
       setLoading(false);
     }
@@ -260,7 +269,7 @@ const AdminLogin = ({ onClose, onLogin, showToast }) => {
         </h3>
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="text-xs font-bold text-gray-500">Email (Optional if using Master Pass)</label>
+            <label className="text-xs font-bold text-gray-500">Email (Leave blank if using Master Password)</label>
             <input 
               type="email" placeholder="admin@example.com" 
               className="w-full border p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none"
@@ -305,12 +314,16 @@ const AdminDashboard = ({ config, setConfig, attendees, pledges, onClose, onSave
     setLocalConfig({ ...localConfig, [section]: newArray });
   };
 
+  // --- WHITE SCREEN CRASH FIX: Logout correctly unmounts component before Firebase destroys token ---
   const handleLogout = async () => {
-    await signOut(auth); // This will clear normal auth
-    onClose(); // This clears the bypass state
+    onClose(); // Hide the Admin component FIRST so it stops trying to read data
+    try {
+      await signOut(auth); // Sign out of Firebase SECOND
+    } catch(err) {
+      console.error(err);
+    }
   };
 
-  // --- NEW: Delete Functions ---
   const handleDeleteItem = async (collectionName, docId) => {
     if (!window.confirm('Are you sure you want to delete this record? This cannot be undone.')) return;
     try {
@@ -324,7 +337,6 @@ const AdminDashboard = ({ config, setConfig, attendees, pledges, onClose, onSave
   const handleClearAll = async (collectionName, dataArray) => {
     if (!window.confirm(`WARNING: You are about to permanently delete ALL ${dataArray.length} records. Are you absolutely sure?`)) return;
     try {
-      // Firebase doesn't allow bulk delete easily from client side, so we loop and delete
       const deletePromises = dataArray.map(item => 
         deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', collectionName, item.id))
       );
@@ -360,8 +372,8 @@ const AdminDashboard = ({ config, setConfig, attendees, pledges, onClose, onSave
               className={`px-5 py-2 rounded-full capitalize font-bold transition-all duration-300 ${activeTab === tab ? 'bg-orange-100 text-orange-700 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
             >
               {tab === 'visuals' ? 'Gallery & Theme' : tab} 
-              {tab === 'attendees' && ` (${attendees.length})`}
-              {tab === 'pledges' && ` (${pledges.length})`}
+              {tab === 'attendees' && ` (${attendees?.length || 0})`}
+              {tab === 'pledges' && ` (${pledges?.length || 0})`}
             </button>
           ))}
         </div>
@@ -371,27 +383,27 @@ const AdminDashboard = ({ config, setConfig, attendees, pledges, onClose, onSave
             <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
               <h3 className="text-lg font-bold mb-4 text-gray-800 border-b pb-2">Header Texts</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input value={localConfig.header.orgName} onChange={(e) => setLocalConfig({...localConfig, header: {...localConfig.header, orgName: e.target.value}})} className="border p-3 rounded-xl bg-gray-50" placeholder="Org Name" />
-                <input value={localConfig.header.eventName} onChange={(e) => setLocalConfig({...localConfig, header: {...localConfig.header, eventName: e.target.value}})} className="border p-3 rounded-xl bg-gray-50" placeholder="Event Name" />
-                <input value={localConfig.header.tagline} onChange={(e) => setLocalConfig({...localConfig, header: {...localConfig.header, tagline: e.target.value}})} className="border p-3 rounded-xl bg-gray-50" placeholder="Tagline" />
-                <input value={localConfig.header.subTagline} onChange={(e) => setLocalConfig({...localConfig, header: {...localConfig.header, subTagline: e.target.value}})} className="border p-3 rounded-xl bg-gray-50" placeholder="Sub-tagline" />
+                <input value={localConfig?.header?.orgName} onChange={(e) => setLocalConfig({...localConfig, header: {...localConfig.header, orgName: e.target.value}})} className="border p-3 rounded-xl bg-gray-50" placeholder="Org Name" />
+                <input value={localConfig?.header?.eventName} onChange={(e) => setLocalConfig({...localConfig, header: {...localConfig.header, eventName: e.target.value}})} className="border p-3 rounded-xl bg-gray-50" placeholder="Event Name" />
+                <input value={localConfig?.header?.tagline} onChange={(e) => setLocalConfig({...localConfig, header: {...localConfig.header, tagline: e.target.value}})} className="border p-3 rounded-xl bg-gray-50" placeholder="Tagline" />
+                <input value={localConfig?.header?.subTagline} onChange={(e) => setLocalConfig({...localConfig, header: {...localConfig.header, subTagline: e.target.value}})} className="border p-3 rounded-xl bg-gray-50" placeholder="Sub-tagline" />
               </div>
             </section>
             
             <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
               <h3 className="text-lg font-bold mb-4 text-gray-800 border-b pb-2">Event Details</h3>
-              <textarea value={localConfig.about.description} onChange={(e) => setLocalConfig({...localConfig, about: {...localConfig.about, description: e.target.value}})} className="border p-3 rounded-xl w-full h-32 mb-4 bg-gray-50" placeholder="Description" />
+              <textarea value={localConfig?.about?.description} onChange={(e) => setLocalConfig({...localConfig, about: {...localConfig.about, description: e.target.value}})} className="border p-3 rounded-xl w-full h-32 mb-4 bg-gray-50" placeholder="Description" />
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <input value={localConfig.about.date} onChange={(e) => setLocalConfig({...localConfig, about: {...localConfig.about, date: e.target.value}})} className="border p-3 rounded-xl bg-gray-50" placeholder="Date" />
-                <input value={localConfig.about.venue} onChange={(e) => setLocalConfig({...localConfig, about: {...localConfig.about, venue: e.target.value}})} className="border p-3 rounded-xl bg-gray-50" placeholder="Venue" />
-                <input value={localConfig.about.time} onChange={(e) => setLocalConfig({...localConfig, about: {...localConfig.about, time: e.target.value}})} className="border p-3 rounded-xl bg-gray-50" placeholder="Time" />
-                <input type="number" value={localConfig.about.stats} onChange={(e) => setLocalConfig({...localConfig, about: {...localConfig.about, stats: e.target.value}})} className="border p-3 rounded-xl bg-gray-50" placeholder="Expected Count (e.g. 3000)" />
+                <input value={localConfig?.about?.date} onChange={(e) => setLocalConfig({...localConfig, about: {...localConfig.about, date: e.target.value}})} className="border p-3 rounded-xl bg-gray-50" placeholder="Date" />
+                <input value={localConfig?.about?.venue} onChange={(e) => setLocalConfig({...localConfig, about: {...localConfig.about, venue: e.target.value}})} className="border p-3 rounded-xl bg-gray-50" placeholder="Venue" />
+                <input value={localConfig?.about?.time} onChange={(e) => setLocalConfig({...localConfig, about: {...localConfig.about, time: e.target.value}})} className="border p-3 rounded-xl bg-gray-50" placeholder="Time" />
+                <input type="number" value={localConfig?.about?.stats} onChange={(e) => setLocalConfig({...localConfig, about: {...localConfig.about, stats: e.target.value}})} className="border p-3 rounded-xl bg-gray-50" placeholder="Expected Count (e.g. 3000)" />
               </div>
             </section>
 
              <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
               <h3 className="text-lg font-bold mb-4 text-gray-800 border-b pb-2">YouTube Links</h3>
-              {localConfig.videos.map((vid, idx) => (
+              {localConfig?.videos?.map((vid, idx) => (
                 <div key={idx} className="flex gap-2 mb-2">
                   <input value={vid.url} onChange={(e) => handleArrayChange('videos', idx, 'url', e.target.value)} className="border p-3 rounded-xl flex-grow bg-gray-50" placeholder="Embed URL" />
                   <input value={vid.title} onChange={(e) => handleArrayChange('videos', idx, 'title', e.target.value)} className="border p-3 rounded-xl w-1/3 bg-gray-50" placeholder="Title" />
@@ -401,11 +413,11 @@ const AdminDashboard = ({ config, setConfig, attendees, pledges, onClose, onSave
           </div>
         )}
 
-        {/* --- Data Tabs with New Delete Feature --- */}
+        {/* --- Data Tabs with Delete Feature --- */}
         {activeTab === 'attendees' && (
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
              <div className="flex justify-between items-center mb-6">
-               <h3 className="font-bold text-lg text-gray-700">Total Registered: {attendees.length}</h3>
+               <h3 className="font-bold text-lg text-gray-700">Total Registered: {attendees?.length || 0}</h3>
                <div className="flex gap-3">
                  <button onClick={() => handleClearAll('attendees', attendees)} className="flex items-center gap-2 bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-xl hover:bg-red-100 font-bold transition">
                    <AlertTriangle size={16} /> Clear All Data
@@ -416,7 +428,7 @@ const AdminDashboard = ({ config, setConfig, attendees, pledges, onClose, onSave
                </div>
              </div>
              
-             {attendees.length === 0 ? (
+             {!attendees || attendees.length === 0 ? (
                <div className="text-center py-10 text-gray-400 font-medium">No attendees registered yet.</div>
              ) : (
                <div className="overflow-x-auto">
@@ -451,7 +463,7 @@ const AdminDashboard = ({ config, setConfig, attendees, pledges, onClose, onSave
         {activeTab === 'pledges' && (
            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
              <div className="flex justify-between items-center mb-6">
-               <h3 className="font-bold text-lg text-gray-700">Total Pledges: {pledges.length}</h3>
+               <h3 className="font-bold text-lg text-gray-700">Total Pledges: {pledges?.length || 0}</h3>
                <div className="flex gap-3">
                  <button onClick={() => handleClearAll('pledges', pledges)} className="flex items-center gap-2 bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-xl hover:bg-red-100 font-bold transition">
                    <AlertTriangle size={16} /> Clear All Data
@@ -462,7 +474,7 @@ const AdminDashboard = ({ config, setConfig, attendees, pledges, onClose, onSave
                </div>
              </div>
              
-             {pledges.length === 0 ? (
+             {!pledges || pledges.length === 0 ? (
                <div className="text-center py-10 text-gray-400 font-medium">No pledges taken yet.</div>
              ) : (
                <div className="overflow-x-auto">
@@ -556,9 +568,8 @@ export default function App() {
     };
   }, []);
 
-  // Data Fetching
+  // Data Fetching (CRASH FIX PROOFED)
   useEffect(() => {
-    // If there is no user AND no bypass active, return
     if (!user && !isBypassAdmin) return;
 
     let unsubConfig = null;
@@ -569,31 +580,30 @@ export default function App() {
       const configRef = doc(db, 'artifacts', appId, 'public', 'data', 'site_config', 'main');
       unsubConfig = onSnapshot(configRef, (snap) => {
         if (snap.exists()) {
-          const data = snap.data();
+          const data = snap.data() || {}; // Safety fallback to prevent crashes
           setConfig(prev => ({
              ...DEFAULT_CONFIG,
              ...data,
              visuals: { ...DEFAULT_CONFIG.visuals, ...(data.visuals || {}) },
              header: { ...DEFAULT_CONFIG.header, ...(data.header || {}) },
              about: { ...DEFAULT_CONFIG.about, ...(data.about || {}) },
-             dedication: { ...DEFAULT_CONFIG.dedication, ...(data.dedication || {}) }
+             dedication: { ...DEFAULT_CONFIG.dedication, ...(data.dedication || {}) },
+             gallery: data.gallery || DEFAULT_CONFIG.gallery, // Prevents .map() crashes
+             videos: data.videos || DEFAULT_CONFIG.videos // Prevents .map() crashes
           }));
         }
       }, (err) => console.warn('Config Load Error:', err.message)); 
 
-      // Fetch admin data if they are logged in normally OR using the bypass password
       if (isAdmin || isBypassAdmin) {
         const attRef = collection(db, 'artifacts', appId, 'public', 'data', 'attendees');
         const qAtt = query(attRef, orderBy('createdAt', 'desc'));
         unsubAtt = onSnapshot(qAtt, (snap) => {
-          // MAP THE DOC ID SO WE CAN DELETE IT LATER
           setAttendees(snap.docs.map(d => ({ ...d.data(), id: d.id })));
         }, (err) => console.warn('Attendees Load Error:', err.message)); 
 
         const pledgeRef = collection(db, 'artifacts', appId, 'public', 'data', 'pledges');
         const qPledge = query(pledgeRef, orderBy('createdAt', 'desc'));
         unsubPledge = onSnapshot(qPledge, (snap) => {
-          // MAP THE DOC ID SO WE CAN DELETE IT LATER
           setPledges(snap.docs.map(d => ({ ...d.data(), id: d.id })));
         }, (err) => console.warn('Pledges Load Error:', err.message)); 
       }
@@ -662,7 +672,7 @@ export default function App() {
   };
 
   const sharePledge = async () => {
-    const text = `🌟 I pledge for a Drug-Free India! 🌟\n\nI just took the "I Love Bharat" pledge at the ISKCON Youth Fest. Join me in this revolution!\n\nEvent: ${config.header.eventName}\nTheme: ${config.header.tagline}\n\n#ILoveBharat #NashaMuktBharat #ISKCONUjjain`;
+    const text = `🌟 I pledge for a Drug-Free India! 🌟\n\nI just took the "I Love Bharat" pledge at the ISKCON Youth Fest. Join me in this revolution!\n\nEvent: ${config.header?.eventName}\nTheme: ${config.header?.tagline}\n\n#ILoveBharat #NashaMuktBharat #ISKCONUjjain`;
     if (navigator.share) {
       navigator.share({ title: 'My Pledge', text, url: window.location.href });
     } else {
@@ -707,7 +717,7 @@ export default function App() {
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="relative group cursor-pointer bg-white rounded-full p-1 border-2 border-orange-500 shadow-md">
-               <img src={config.header.logoUrl} onError={handleImageError} alt="Logo" className="h-10 w-10 rounded-full object-contain transform group-hover:rotate-12 transition-transform duration-500" />
+               <img src={config.header?.logoUrl} onError={handleImageError} alt="Logo" className="h-10 w-10 rounded-full object-contain transform group-hover:rotate-12 transition-transform duration-500" />
             </div>
             <span className="font-black text-xl hidden sm:block text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-orange-800 tracking-tight">ISKCON Ujjain</span>
           </div>
@@ -752,13 +762,13 @@ export default function App() {
             <div className="inline-block mb-4 px-6 py-2 rounded-full bg-gradient-to-r from-orange-100 to-orange-50 border border-orange-200 shadow-sm animate-fade-in-up">
               <p className="text-orange-800 font-bold tracking-widest uppercase text-sm flex items-center gap-2">
                 <Heart size={14} className="fill-orange-500 text-orange-500 animate-pulse"/>
-                {config.header.orgName}
+                {config.header?.orgName}
               </p>
             </div>
             
             <h2 className="text-5xl md:text-7xl font-black mb-8 tracking-tight drop-shadow-sm">
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-orange-600 via-orange-500 to-red-600">
-                {config.header.eventName}
+                {config.header?.eventName}
               </span>
             </h2>
             
@@ -778,12 +788,12 @@ export default function App() {
             </div>
 
             <h3 className="text-3xl md:text-4xl font-serif text-gray-800 font-bold mb-6 drop-shadow-md">
-              "{config.header.tagline}"
+              "{config.header?.tagline}"
             </h3>
             
             <div className="inline-flex items-center gap-3 bg-gray-900 text-white px-8 py-3 rounded-full font-bold shadow-xl hover:bg-gray-800 hover:shadow-orange-500/20 transition-all transform hover:-translate-y-1">
               <Users className="w-5 h-5 text-orange-400" />
-              <span className="tracking-wide text-lg">{config.header.subTagline}</span>
+              <span className="tracking-wide text-lg">{config.header?.subTagline}</span>
             </div>
           </div>
         </header>
@@ -801,10 +811,10 @@ export default function App() {
                     <Info size={16} className="text-orange-600" /> About The Revolution
                   </div>
                   <h2 className="text-4xl md:text-5xl font-black text-gray-900 font-serif leading-tight">
-                    {config.about.title}
+                    {config.about?.title}
                   </h2>
                   <p className="text-lg text-gray-700 leading-relaxed font-medium text-justify">
-                    {config.about.description}
+                    {config.about?.description}
                   </p>
                   
                   {/* Visual Impact Goal Tracker */}
@@ -812,7 +822,7 @@ export default function App() {
                      <div className="flex justify-between items-end mb-2">
                         <div>
                            <p className="text-sm font-bold text-gray-500 uppercase tracking-widest">Our Target Goal</p>
-                           <p className="text-3xl font-black text-gray-900">{config.about.stats} <span className="text-lg text-gray-500">Youths</span></p>
+                           <p className="text-3xl font-black text-gray-900">{config.about?.stats} <span className="text-lg text-gray-500">Youths</span></p>
                         </div>
                         <div className="text-orange-600 font-bold bg-orange-100 px-3 py-1 rounded-lg">Join the count!</div>
                      </div>
@@ -826,9 +836,9 @@ export default function App() {
                
                <div className="flex-1 w-full grid grid-cols-1 gap-5">
                   {[
-                    { icon: <Calendar size={28} />, title: "Date", val: config.about.date, color: "orange" },
-                    { icon: <Clock size={28} />, title: "Time", val: config.about.time, color: "green" },
-                    { icon: <MapPin size={28} />, title: "Venue", val: config.about.venue, color: "blue" }
+                    { icon: <Calendar size={28} />, title: "Date", val: config.about?.date, color: "orange" },
+                    { icon: <Clock size={28} />, title: "Time", val: config.about?.time, color: "green" },
+                    { icon: <MapPin size={28} />, title: "Venue", val: config.about?.venue, color: "blue" }
                   ].map((item, idx) => (
                     <div key={idx} className={`bg-white p-6 rounded-3xl border border-gray-100 flex items-center gap-6 hover:scale-[1.03] hover:shadow-xl transition-all duration-300 shadow-sm group`}>
                        <div className={`bg-${item.color}-50 text-${item.color}-600 p-4 rounded-2xl group-hover:bg-${item.color}-600 group-hover:text-white transition-colors`}>
@@ -854,14 +864,14 @@ export default function App() {
                  <div className="relative h-72 w-72 md:h-80 md:w-80 bg-white p-3 rounded-3xl shadow-2xl transition-transform hover:scale-105 animate-fade-in-up" style={{ animationDelay: '0.2s', animationDuration: '3s', animationIterationCount: 'infinite', animationName: 'float' }}>
                    <div className="h-full w-full overflow-hidden rounded-2xl border border-gray-100">
                      <img 
-                      src={config.dedication.imageUrl} 
+                      src={config.dedication?.imageUrl} 
                       onError={handleImageError}
                       alt="Srila Prabhupada" 
                       className="h-full w-full object-cover filter contrast-110"
                      />
                    </div>
                    <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur px-6 py-2 rounded-full shadow-lg text-xs font-black uppercase tracking-widest text-orange-800 border border-orange-100 whitespace-nowrap">
-                     {config.dedication.title}
+                     {config.dedication?.title}
                    </div>
                  </div>
               </div>
@@ -869,10 +879,10 @@ export default function App() {
               <div className="text-center md:text-left flex-1 space-y-4">
                 <div className="h-1.5 w-16 bg-orange-500 rounded-full mx-auto md:mx-0"></div>
                 <h2 className="text-3xl md:text-5xl font-black text-gray-900 font-serif leading-tight">
-                  {config.dedication.name}
+                  {config.dedication?.name}
                 </h2>
                 <p className="text-xl text-gray-600 font-medium italic">
-                  "{config.dedication.subtitle}"
+                  "{config.dedication?.subtitle}"
                 </p>
               </div>
            </div>
@@ -903,7 +913,7 @@ export default function App() {
              </div>
              
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-2 md:px-8">
-               {config.gallery.map((item, idx) => (
+               {config.gallery?.map((item, idx) => (
                  <div 
                    key={item.id} 
                    className="group relative h-80 rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 hover:z-20 cursor-pointer"
@@ -940,7 +950,7 @@ export default function App() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {config.videos.map((vid) => (
+            {config.videos?.map((vid) => (
               <div key={vid.id} className="bg-white rounded-3xl shadow-xl overflow-hidden hover:shadow-2xl hover:shadow-red-500/10 transition duration-300 border border-gray-100 group">
                 <div className="aspect-video w-full bg-gray-900 relative">
                    <div className="absolute inset-0 flex items-center justify-center z-0">
@@ -975,9 +985,9 @@ export default function App() {
         
         <div className="container mx-auto px-4 relative z-10">
           <div className="w-24 h-24 mx-auto mb-6 bg-white p-2 rounded-full hover:scale-110 transition-transform duration-500 shadow-[0_0_30px_rgba(255,255,255,0.2)]">
-            <img src={config.header.logoUrl} onError={handleImageError} className="w-full h-full rounded-full object-contain" alt="logo" />
+            <img src={config.header?.logoUrl} onError={handleImageError} className="w-full h-full rounded-full object-contain" alt="logo" />
           </div>
-          <h3 className="text-white text-3xl font-black mb-3 font-serif tracking-wide">{config.header.orgName}</h3>
+          <h3 className="text-white text-3xl font-black mb-3 font-serif tracking-wide">{config.header?.orgName}</h3>
           <p className="text-gray-400 mb-10 max-w-md mx-auto text-lg">Connecting youth to their roots through culture, wisdom, and devotion.</p>
           <div className="pt-8 border-t border-gray-800">
             <p className="text-sm font-bold tracking-widest uppercase">© 2026 I Love Bharat Fest. Built for ISKCON Ujjain.</p>
@@ -1135,7 +1145,7 @@ export default function App() {
                  
                  <div className="p-8 bg-white text-center">
                     <div className="w-24 h-24 bg-white rounded-full mx-auto mb-5 flex items-center justify-center border-4 border-orange-100 shadow-md p-1">
-                      <img src={config.header.logoUrl} onError={handleImageError} alt="Logo" className="w-full h-full rounded-full object-cover" />
+                      <img src={config.header?.logoUrl} onError={handleImageError} alt="Logo" className="w-full h-full rounded-full object-cover" />
                     </div>
                     
                     <h2 className="text-3xl font-black text-gray-900 mb-2">{showCoupon.name}</h2>
@@ -1154,7 +1164,7 @@ export default function App() {
                  <div className="bg-gray-900 p-5 flex items-center justify-between gap-4">
                     <div className="text-left">
                        <p className="text-gray-500 text-[10px] uppercase font-bold tracking-widest">Event Date</p>
-                       <p className="text-white font-bold">{config.about.date}</p>
+                       <p className="text-white font-bold">{config.about?.date}</p>
                     </div>
                     <div className="bg-white p-1.5 rounded-lg">
                        <div className="grid grid-cols-4 gap-0.5 w-12 h-12">
