@@ -34,8 +34,8 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-// New Database ID for Dhurandhar Event
-const appId = 'dhurandhar-final-2026';
+// New Database ID to strictly enforce DHURANDHAR data separation
+const appId = 'dhurandhar-fest-2026-v3';
 
 // ==========================================
 // --- HELPER FUNCTIONS ---
@@ -52,21 +52,42 @@ const formatTimestamp = (ts) => {
   try { return new Date(ts).toLocaleString(); } catch(e) { return ''; }
 };
 
-const downloadCSV = (data, filename) => {
+// FIX: COMPLETELY REWRITTEN CSV DOWNLOADER TO PREVENT COLLISIONS
+const downloadCSV = (type, data, filename) => {
   if (!data || !data.length) {
     alert("No data to download.");
     return;
   }
-  const headers = Object.keys(data[0]).filter(k => k !== 'id').join(",");
-  const rows = data.map(obj => {
-    const objCopy = { ...obj };
-    delete objCopy.id; 
-    return Object.values(objCopy).map(val => 
-      typeof val === 'object' && val?.seconds ? new Date(val.seconds*1000).toISOString() : 
-      `"${String(val).replace(/"/g, '""')}"`
-    ).join(",");
+  
+  let csvContent = "data:text/csv;charset=utf-8,";
+  let headers = [];
+  let rows = [];
+
+  if (type === 'attendees') {
+    headers = ["Name", "Age", "Gender", "Contact Number", "Date Added", "Exact Time"];
+    rows = data.map(row => [
+      row.name || "",
+      row.age || "",
+      row.gender === 'M' ? 'Male' : row.gender === 'F' ? 'Female' : row.gender || "",
+      row.contact || row.mobile || "",
+      row.date || "",
+      formatTimestamp(row.createdAt)
+    ]);
+  } else {
+    headers = ["Name", "Mobile Number", "Exact Time"];
+    rows = data.map(row => [
+      row.name || "",
+      row.mobile || row.contact || "",
+      formatTimestamp(row.createdAt)
+    ]);
+  }
+
+  csvContent += headers.join(",") + "\n";
+  rows.forEach(rowArray => {
+    let row = rowArray.map(val => `"${String(val).replace(/"/g, '""')}"`).join(",");
+    csvContent += row + "\n";
   });
-  const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join("\n");
+
   const encodedUri = encodeURI(csvContent);
   const link = document.createElement("a");
   link.setAttribute("href", encodedUri);
@@ -80,7 +101,6 @@ const downloadCSV = (data, filename) => {
 const DEFAULT_CONFIG = {
   settings: { autoPopup: 'attendance' },
   visuals: {
-    // NEW TEMPLE BACKGROUND DIRECTLY LINKED
     backgroundImage: "./watermarked_img_12355519483312131100.png",
     backgroundOpacity: 1.0, 
   },
@@ -481,7 +501,7 @@ const AdminDashboard = ({ config, setConfig, attendees, pledges, onClose, onSave
                  <button onClick={() => handleClearAll(activeTab, activeTab === 'attendees' ? attendees : pledges)} className="flex items-center gap-2 bg-red-50 text-red-600 border border-red-100 px-5 py-3 rounded-xl hover:bg-red-600 hover:text-white font-extrabold text-[10px] tracking-widest transition-all shadow-sm">
                    <AlertTriangle size={14} /> CLEAR DATABASE
                  </button>
-                 <button onClick={() => downloadCSV(activeTab === 'attendees' ? attendees : pledges, `${activeTab}_data.csv`)} className="flex items-center gap-2 bg-gray-900 text-white px-5 py-3 rounded-xl hover:bg-orange-500 font-extrabold text-[10px] tracking-widest transition-all shadow-md hover:shadow-orange-500/30">
+                 <button onClick={() => downloadCSV(activeTab, activeTab === 'attendees' ? attendees : pledges, `${activeTab}_data.csv`)} className="flex items-center gap-2 bg-gray-900 text-white px-5 py-3 rounded-xl hover:bg-orange-500 font-extrabold text-[10px] tracking-widest transition-all shadow-md hover:shadow-orange-500/30">
                    <Download size={14} /> EXPORT CSV
                  </button>
                </div>
@@ -596,20 +616,9 @@ export default function App() {
     try {
       
       // ==========================================
-      // IMPORTANT FIX: 
-      // This section was previously overriding your DEFAULT_CONFIG with old saved Firebase data. 
-      // It has been completely disabled below to guarantee your new Dhurandhar text appears!
+      // FIREBASE CLOUD CONFIG OVERRIDE IS DISABLED
+      // This forces the React App to use the new DHURANDHAR text
       // ==========================================
-      /*
-      const configRef = doc(db, 'artifacts', appId, 'public', 'data', 'site_config', 'main');
-      const subConfig = onSnapshot(configRef, (snap) => {
-        if (snap.exists()) {
-          const data = snap.data() || {}; 
-          setConfig(prev => ({ ...DEFAULT_CONFIG, ...data }));
-        }
-      });
-      subscriptions.push(subConfig);
-      */
 
       if (isAdmin || isBypassAdmin) {
         const attRef = collection(db, 'artifacts', appId, 'public', 'data', 'attendees');
@@ -708,8 +717,8 @@ export default function App() {
            alt="background"
            className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out opacity-90" 
         />
-        {/* CLEAR BACKGROUND FIX: Replaced thick white blur with a very subtle dark gradient so white text is highly readable but the image is perfectly sharp */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/60"></div>
+        {/* CLEAR BACKGROUND FIX: Very subtle dark overlay, no thick blur */}
+        <div className="absolute inset-0 bg-black/20"></div>
       </div>
 
       {showAdminLogin && <AdminLogin onClose={() => setShowAdminLogin(false)} onLogin={handleAdminLoginSuccess} showToast={showToastMsg} />}
@@ -1045,6 +1054,7 @@ export default function App() {
         </div>
       )}
 
+      {/* FIX: DHURANDHAR THEMED PRASADAM PASS */}
       {showCoupon && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl">
            <div className="max-w-sm w-full relative animate-scale-in flex flex-col items-center">
