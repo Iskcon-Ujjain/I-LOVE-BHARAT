@@ -33,7 +33,9 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+// FIX: Changed appId to bypass the old cached database!
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'dhurandhar-2026';
 
 // ==========================================
 // --- HELPER FUNCTIONS ---
@@ -78,12 +80,15 @@ const downloadCSV = (data, filename) => {
 const DEFAULT_CONFIG = {
   settings: { autoPopup: 'attendance' },
   visuals: {
-    backgroundImage: "https://images.unsplash.com/photo-1596707333630-67c8dc91b9e9?auto=format&fit=crop&q=80&w=2000",
+    // FIX: Using the generated AI image for the background
+    backgroundImage: "./watermarked_img_12355519483312131100.png",
     backgroundOpacity: 1.0, 
   },
   header: {
     orgName: "ISKCON Ujjain Presents",
     eventName: "DHURANDHAR",
+    heroLeft: "BETTER YOUTH",
+    heroRight: "BETTER BHARAT",
     tagline: "युवाओं के लिए एक अनोखा प्रेरणादायक कार्यक्रम",
     subTagline: "100% FREE • Boys & Girls Welcome",
     logoUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/ISKCON_Logo.svg/1200px-ISKCON_Logo.svg.png"
@@ -356,6 +361,13 @@ const AdminDashboard = ({ config, setConfig, attendees, pledges, onClose, onSave
                 <AdvancedUploader label="Organization Logo" value={localConfig?.header?.logoUrl} onChange={(url) => updateNested('header', 'logoUrl', url)} showToast={showToast} />
                 <div className="space-y-1.5"><label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest">Org Name</label><input value={localConfig?.header?.orgName || ''} onChange={(e) => updateNested('header', 'orgName', e.target.value)} className="w-full border border-gray-200 bg-white p-3.5 rounded-2xl outline-none font-bold text-sm shadow-sm focus:border-orange-400 focus:ring-4 focus:ring-orange-500/10 transition" /></div>
                 <div className="space-y-1.5"><label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest">Event Main Title</label><input value={localConfig?.header?.eventName || ''} onChange={(e) => updateNested('header', 'eventName', e.target.value)} className="w-full border border-gray-200 bg-white p-3.5 rounded-2xl outline-none font-bold text-sm shadow-sm focus:border-orange-400 transition" /></div>
+                
+                {/* FIX: ADDED INPUTS FOR THE GIANT TEXT SO YOU CAN CHANGE IT FROM THE DASHBOARD */}
+                <div className="grid grid-cols-2 gap-4">
+                   <div className="space-y-1.5"><label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest">Giant Text (Left)</label><input value={localConfig?.header?.heroLeft || ''} onChange={(e) => updateNested('header', 'heroLeft', e.target.value)} className="w-full border border-gray-200 bg-white p-3.5 rounded-2xl outline-none font-bold text-sm shadow-sm" /></div>
+                   <div className="space-y-1.5"><label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest">Giant Text (Right)</label><input value={localConfig?.header?.heroRight || ''} onChange={(e) => updateNested('header', 'heroRight', e.target.value)} className="w-full border border-gray-200 bg-white p-3.5 rounded-2xl outline-none font-bold text-sm shadow-sm" /></div>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                    <div className="space-y-1.5"><label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest">Hero Tagline</label><input value={localConfig?.header?.tagline || ''} onChange={(e) => updateNested('header', 'tagline', e.target.value)} className="w-full border border-gray-200 bg-white p-3.5 rounded-2xl outline-none font-bold text-sm shadow-sm" /></div>
                    <div className="space-y-1.5"><label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest">Button Sub-Tagline</label><input value={localConfig?.header?.subTagline || ''} onChange={(e) => updateNested('header', 'subTagline', e.target.value)} className="w-full border border-gray-200 bg-white p-3.5 rounded-2xl outline-none font-bold text-sm shadow-sm" /></div>
@@ -775,11 +787,20 @@ export default function App() {
             <div className="my-10 transform hover:scale-[1.02] transition duration-700 ease-out z-20 relative">
                <div className="inline-flex flex-wrap items-center justify-center gap-3 sm:gap-4 md:gap-6 bg-white/90 backdrop-blur-2xl p-6 md:p-8 rounded-[2rem] shadow-xl border border-white relative overflow-hidden group max-w-[95vw]">
                   <div className="absolute -inset-20 bg-gradient-to-tr from-orange-400/20 via-white/0 to-green-400/20 blur-3xl group-hover:opacity-100 transition-opacity duration-1000 animate-spin-slow pointer-events-none opacity-50"></div>
-                  <span className="text-2xl sm:text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-b from-orange-400 to-orange-600 drop-shadow-sm z-10 uppercase">BETTER YOUTH</span>
+                  
+                  {/* FIX: Now connected to config.header.heroLeft and heroRight so it can be changed from the Admin Dashboard */}
+                  <span className="text-2xl sm:text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-b from-orange-400 to-orange-600 drop-shadow-sm z-10 uppercase">
+                    {config.header?.heroLeft || "BETTER YOUTH"}
+                  </span>
+                  
                   <div className="relative mx-1 sm:mx-2 md:mx-4 z-10 flex flex-col items-center justify-center">
                     <TriColorHeart className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 drop-shadow-md hover:scale-110 transition-transform duration-500 animate-pulse" />
                   </div>
-                  <span className="text-2xl sm:text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-b from-green-500 to-green-700 drop-shadow-sm z-10 uppercase">BETTER BHARAT</span>
+                  
+                  <span className="text-2xl sm:text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-b from-green-500 to-green-700 drop-shadow-sm z-10 uppercase">
+                    {config.header?.heroRight || "BETTER BHARAT"}
+                  </span>
+
                </div>
             </div>
 
