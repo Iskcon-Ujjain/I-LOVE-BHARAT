@@ -595,23 +595,17 @@ export default function App() {
     const subscriptions = []; 
     try {
       
-      // FIX: I HAVE COMMENTED OUT THE FIREBASE CLOUD OVERRIDE SO YOU SEE THE NEW CODE IMMEDIATELY.
+      // ==========================================
+      // IMPORTANT FIX: 
+      // This section was previously overriding your DEFAULT_CONFIG with old saved Firebase data. 
+      // It has been completely disabled below to guarantee your new Dhurandhar text appears!
+      // ==========================================
       /*
       const configRef = doc(db, 'artifacts', appId, 'public', 'data', 'site_config', 'main');
       const subConfig = onSnapshot(configRef, (snap) => {
         if (snap.exists()) {
           const data = snap.data() || {}; 
-          setConfig(prev => ({
-             ...DEFAULT_CONFIG, ...data,
-             settings: { ...DEFAULT_CONFIG.settings, ...(data.settings || {}) },
-             visuals: { ...DEFAULT_CONFIG.visuals, ...(data.visuals || {}) },
-             header: { ...DEFAULT_CONFIG.header, ...(data.header || {}) },
-             about: { ...DEFAULT_CONFIG.about, ...(data.about || {}) },
-             dedication: { ...DEFAULT_CONFIG.dedication, ...(data.dedication || {}) },
-             pledgeText: { ...DEFAULT_CONFIG.pledgeText, ...(data.pledgeText || {}) },
-             gallery: data.gallery || DEFAULT_CONFIG.gallery, 
-             videos: data.videos || DEFAULT_CONFIG.videos 
-          }));
+          setConfig(prev => ({ ...DEFAULT_CONFIG, ...data }));
         }
       });
       subscriptions.push(subConfig);
@@ -708,17 +702,14 @@ export default function App() {
 
       {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({...toast, show: false})} />}
 
-      <div className="fixed inset-0 z-[-2] pointer-events-none bg-gray-100">
+      <div className="fixed inset-0 z-[-2] pointer-events-none bg-gray-950">
         <img 
            src={config.visuals?.backgroundImage || DEFAULT_CONFIG.visuals.backgroundImage} 
            alt="background"
-           className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out" 
-           style={{ opacity: config.visuals?.backgroundOpacity ?? 1.0 }} 
+           className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out opacity-90" 
         />
-        {/* FIX: REMOVED BLUR COMPLETELY. Using only a very subtle dark tint so the temple background image is 100% sharp and visible. */}
-        <div className="absolute inset-0 bg-black/10"></div>
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-300 rounded-full blur-[150px] opacity-20 mix-blend-multiply pointer-events-none animate-pulse"></div>
-        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-red-300 rounded-full blur-[150px] opacity-20 mix-blend-multiply pointer-events-none"></div>
+        {/* CLEAR BACKGROUND FIX: Replaced thick white blur with a very subtle dark gradient so white text is highly readable but the image is perfectly sharp */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/60"></div>
       </div>
 
       {showAdminLogin && <AdminLogin onClose={() => setShowAdminLogin(false)} onLogin={handleAdminLoginSuccess} showToast={showToastMsg} />}
@@ -760,45 +751,39 @@ export default function App() {
               <p className="text-gray-800 font-bold tracking-widest uppercase text-xs">{config.header?.orgName}</p>
             </div>
 
-            <h2 className="text-4xl md:text-6xl lg:text-8xl font-extrabold mb-6 md:mb-8 tracking-tighter drop-shadow-xl animate-fade-in-up leading-tight max-w-[95vw] mx-auto break-words" style={{ animationDelay: '0.1s' }}>
-              <span className="text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
-                {config.header?.eventName}
-              </span>
+            <h2 className="text-5xl md:text-7xl lg:text-9xl font-black mb-6 md:mb-12 tracking-tighter drop-shadow-xl animate-fade-in-up leading-tight max-w-[95vw] mx-auto break-words text-white" style={{ animationDelay: '0.1s' }}>
+               {config.header?.eventName}
             </h2>
 
-            {/* FIX: REMOVED THE FLAG HEART ENTIRELY. REPLACED WITH A GITA BOOK ICON AND 'BETTER YOUTH BETTER BHARAT' */}
+            {/* COMPLETELY NEW HERO BLOCK: REPLACES THE HEART */}
             <div className="my-10 transform hover:scale-[1.02] transition duration-700 ease-out z-20 relative">
-               <div className="inline-flex flex-col items-center justify-center gap-4 bg-white/90 backdrop-blur-xl p-8 md:p-10 rounded-[3rem] shadow-2xl border border-white/50 relative overflow-hidden group max-w-[95vw]">
-                  <div className="absolute -inset-20 bg-gradient-to-tr from-blue-400/20 via-orange-400/10 to-red-400/20 blur-3xl group-hover:opacity-100 transition-opacity duration-1000 animate-spin-slow pointer-events-none opacity-50"></div>
+               <div className="inline-flex flex-col items-center justify-center gap-4 bg-white/10 backdrop-blur-md p-8 md:p-12 rounded-[3rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-white/20 relative overflow-hidden group max-w-[95vw]">
                   
-                  <div className="flex items-center gap-3 bg-gradient-to-r from-orange-50 to-red-50 px-6 py-2 rounded-full border border-orange-200 mb-2 shadow-inner">
-                    <BookOpen className="text-orange-600 w-5 h-5 animate-pulse" />
-                    <span className="text-orange-800 font-bold tracking-widest text-[10px] md:text-xs uppercase">ज्ञान • भक्ति • अनुशासन</span>
+                  <div className="flex items-center gap-3 bg-gradient-to-r from-orange-500 to-red-600 px-6 py-2 rounded-full mb-4 shadow-lg">
+                    <BookOpen className="text-white w-5 h-5 animate-pulse" />
+                    <span className="text-white font-extrabold tracking-widest text-xs md:text-sm uppercase drop-shadow-md">ज्ञान • भक्ति • अनुशासन</span>
                   </div>
 
-                  <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6 text-center relative z-10">
-                      <span className="text-3xl md:text-5xl lg:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-br from-blue-700 to-blue-900 drop-shadow-sm uppercase tracking-tight">
+                  <div className="flex flex-col items-center gap-1 md:gap-2 text-center">
+                      <span className="text-4xl md:text-6xl font-black text-white drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)] z-10 uppercase tracking-tight">
                         {config.header?.heroLeft || "BETTER YOUTH"}
                       </span>
                       
-                      {/* THIS REPLACES THE HEART */}
-                      <div className="hidden md:flex items-center justify-center w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-orange-400 to-red-500 rounded-full shadow-[0_10px_20px_rgba(249,115,22,0.4)] transform hover:rotate-12 transition-transform duration-300">
-                         <BookOpen className="text-white w-6 h-6 md:w-8 md:h-8" />
-                      </div>
+                      <div className="w-24 h-1.5 md:h-2 bg-gradient-to-r from-yellow-300 to-yellow-500 rounded-full my-3 shadow-[0_0_15px_rgba(253,224,71,0.8)]"></div>
                       
-                      <span className="text-3xl md:text-5xl lg:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-br from-orange-500 to-red-600 drop-shadow-sm uppercase tracking-tight">
+                      <span className="text-4xl md:text-6xl font-black text-white drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)] z-10 uppercase tracking-tight">
                         {config.header?.heroRight || "BETTER BHARAT"}
                       </span>
                   </div>
                </div>
             </div>
 
-            <h3 className="text-lg md:text-2xl lg:text-3xl text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] font-bold mb-8 tracking-tight animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+            <h3 className="text-xl md:text-3xl text-white drop-shadow-[0_2px_5px_rgba(0,0,0,0.8)] font-bold mb-8 tracking-tight animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
               "{config.header?.tagline}"
             </h3>
 
-            <div className="inline-flex items-center gap-4 bg-gray-900 text-white px-8 py-4 rounded-full font-bold shadow-xl hover:bg-blue-700 hover:shadow-blue-600/30 transition-all transform hover:-translate-y-1 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
-              <Users className="w-5 h-5 text-blue-400" />
+            <div className="inline-flex items-center gap-4 bg-white text-gray-900 px-8 py-4 rounded-full font-bold shadow-2xl hover:bg-blue-600 hover:text-white transition-all transform hover:-translate-y-1 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+              <Users className="w-5 h-5" />
               <span className="tracking-widest text-sm uppercase">{config.header?.subTagline}</span>
             </div>
           </div>
@@ -1060,7 +1045,6 @@ export default function App() {
         </div>
       )}
 
-      {/* FIX: DHURANDHAR THEMED PRASADAM PASS */}
       {showCoupon && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl">
            <div className="max-w-sm w-full relative animate-scale-in flex flex-col items-center">
@@ -1133,7 +1117,6 @@ export default function App() {
                       <path d="M10,0 h4 v40 h-4 z M18,0 h2 v40 h-2 z M24,0 h6 v40 h-6 z M34,0 h2 v40 h-2 z M40,0 h8 v40 h-8 z M52,0 h2 v40 h-2 z M58,0 h6 v40 h-6 z M68,0 h4 v40 h-4 z M76,0 h2 v40 h-2 z M82,0 h6 v40 h-6 z M92,0 h8 v40 h-8 z M104,0 h2 v40 h-2 z M110,0 h4 v40 h-4 z M118,0 h6 v40 h-6 z M128,0 h2 v40 h-2 z M134,0 h4 v40 h-4 z M142,0 h8 v40 h-8 z M154,0 h2 v40 h-2 z M160,0 h6 v40 h-6 z M170,0 h4 v40 h-4 z M178,0 h2 v40 h-2 z M184,0 h6 v40 h-6 z" fill="currentColor"/>
                     </svg>
                   </div>
-                  {/* FIX: PASS PREFIX CHANGED TO DHUR */}
                   <p className="text-[8px] font-bold tracking-[0.4em] text-gray-400 uppercase">DHUR-{Date.now().toString().slice(-6)}-{showCoupon.name.substring(0,2)}</p>
                 </div>
               </div>
