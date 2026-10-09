@@ -4,7 +4,7 @@ import {
   Menu, X, Share2, Download, Lock, Save, 
   Youtube, CheckCircle, Ticket, 
   Sliders, Type, Settings, UploadCloud, Plus, Trash2, Heart,
-  AlertTriangle, Sparkles, Image as ImageIcon, Link as LinkIcon, LogOut
+  AlertTriangle, Sparkles, Image as ImageIcon, Link as LinkIcon, LogOut, BookOpen
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { 
@@ -34,7 +34,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-// FIX: Changed appId to bypass the old cached database!
+// Database ID for Dhurandhar Event
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'dhurandhar-2026';
 
 // ==========================================
@@ -80,7 +80,6 @@ const downloadCSV = (data, filename) => {
 const DEFAULT_CONFIG = {
   settings: { autoPopup: 'attendance' },
   visuals: {
-    // FIX: Using the generated AI image for the background
     backgroundImage: "./watermarked_img_12355519483312131100.png",
     backgroundOpacity: 1.0, 
   },
@@ -164,28 +163,6 @@ const Toast = ({ message, type, onClose }) => {
     </div>
   );
 };
-
-const TriColorHeart = ({ className }) => (
-  <svg viewBox="0 0 24 24" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="tricolor" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="33%" stopColor="#FF9933" />
-        <stop offset="33%" stopColor="#FFFFFF" />
-        <stop offset="66%" stopColor="#FFFFFF" />
-        <stop offset="66%" stopColor="#138808" />
-      </linearGradient>
-      <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-        <feDropShadow dx="0" dy="4" stdDeviation="4" floodOpacity="0.3"/>
-      </filter>
-    </defs>
-    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="url(#tricolor)" stroke="#e5e5e5" strokeWidth="0.5" filter="url(#shadow)"/>
-    <g transform="translate(12, 12)" style={{transformBox: 'fill-box', transformOrigin: 'center'}}> 
-      <circle r="3.2" stroke="#000080" strokeWidth="0.4" fill="white" fillOpacity="0.8" />
-      <circle r="0.5" fill="#000080" />
-      {[...Array(24)].map((_, i) => (<line key={i} x1="0" y1="0" x2="0" y2="-3.2" stroke="#000080" strokeWidth="0.2" transform={`rotate(${i * 15})`} />))}
-    </g>
-  </svg>
-);
 
 const AdvancedUploader = ({ label, value, onChange, showToast }) => {
   const [dragActive, setDragActive] = useState(false);
@@ -362,12 +339,6 @@ const AdminDashboard = ({ config, setConfig, attendees, pledges, onClose, onSave
                 <div className="space-y-1.5"><label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest">Org Name</label><input value={localConfig?.header?.orgName || ''} onChange={(e) => updateNested('header', 'orgName', e.target.value)} className="w-full border border-gray-200 bg-white p-3.5 rounded-2xl outline-none font-bold text-sm shadow-sm focus:border-orange-400 focus:ring-4 focus:ring-orange-500/10 transition" /></div>
                 <div className="space-y-1.5"><label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest">Event Main Title</label><input value={localConfig?.header?.eventName || ''} onChange={(e) => updateNested('header', 'eventName', e.target.value)} className="w-full border border-gray-200 bg-white p-3.5 rounded-2xl outline-none font-bold text-sm shadow-sm focus:border-orange-400 transition" /></div>
                 
-                {/* FIX: ADDED INPUTS FOR THE GIANT TEXT SO YOU CAN CHANGE IT FROM THE DASHBOARD */}
-                <div className="grid grid-cols-2 gap-4">
-                   <div className="space-y-1.5"><label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest">Giant Text (Left)</label><input value={localConfig?.header?.heroLeft || ''} onChange={(e) => updateNested('header', 'heroLeft', e.target.value)} className="w-full border border-gray-200 bg-white p-3.5 rounded-2xl outline-none font-bold text-sm shadow-sm" /></div>
-                   <div className="space-y-1.5"><label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest">Giant Text (Right)</label><input value={localConfig?.header?.heroRight || ''} onChange={(e) => updateNested('header', 'heroRight', e.target.value)} className="w-full border border-gray-200 bg-white p-3.5 rounded-2xl outline-none font-bold text-sm shadow-sm" /></div>
-                </div>
-
                 <div className="grid grid-cols-2 gap-4">
                    <div className="space-y-1.5"><label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest">Hero Tagline</label><input value={localConfig?.header?.tagline || ''} onChange={(e) => updateNested('header', 'tagline', e.target.value)} className="w-full border border-gray-200 bg-white p-3.5 rounded-2xl outline-none font-bold text-sm shadow-sm" /></div>
                    <div className="space-y-1.5"><label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest">Button Sub-Tagline</label><input value={localConfig?.header?.subTagline || ''} onChange={(e) => updateNested('header', 'subTagline', e.target.value)} className="w-full border border-gray-200 bg-white p-3.5 rounded-2xl outline-none font-bold text-sm shadow-sm" /></div>
@@ -703,7 +674,7 @@ export default function App() {
       }
       const canvas = await window.html2canvas(passElement, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
       const link = document.createElement('a');
-      link.download = `ISKCON_Pass_${showCoupon.name.replace(/\s+/g, '_')}.png`;
+      link.download = `DHURANDHAR_Pass_${showCoupon.name.replace(/\s+/g, '_')}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
       showToastMsg("Pass downloaded successfully!", "success");
@@ -713,7 +684,7 @@ export default function App() {
   };
 
   return (
-    <div className="text-gray-800 min-h-screen flex flex-col relative overflow-x-hidden selection:bg-orange-500 selection:text-white scroll-smooth bg-transparent" style={{ fontFamily: "'Poppins', sans-serif" }}>
+    <div className="text-gray-800 min-h-screen flex flex-col relative overflow-x-hidden selection:bg-blue-600 selection:text-white scroll-smooth bg-transparent" style={{ fontFamily: "'Poppins', sans-serif" }}>
 
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
@@ -734,9 +705,10 @@ export default function App() {
            className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out" 
            style={{ opacity: config.visuals?.backgroundOpacity ?? 1.0 }} 
         />
-        <div className="absolute inset-0 bg-white/70 backdrop-blur-lg"></div>
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-orange-300 rounded-full blur-[150px] opacity-30 mix-blend-multiply pointer-events-none animate-pulse"></div>
-        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-blue-300 rounded-full blur-[150px] opacity-20 mix-blend-multiply pointer-events-none"></div>
+        {/* FIX: Reduced the opacity of the white overlay and the blur so the temple background image is clearly visible! */}
+        <div className="absolute inset-0 bg-white/30 backdrop-blur-sm"></div>
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-300 rounded-full blur-[150px] opacity-30 mix-blend-multiply pointer-events-none animate-pulse"></div>
+        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-red-300 rounded-full blur-[150px] opacity-20 mix-blend-multiply pointer-events-none"></div>
       </div>
 
       {showAdminLogin && <AdminLogin onClose={() => setShowAdminLogin(false)} onLogin={handleAdminLoginSuccess} showToast={showToastMsg} />}
@@ -745,22 +717,22 @@ export default function App() {
       <nav className="fixed top-0 w-full z-40 bg-white/80 backdrop-blur-2xl shadow-[0_4px_30px_rgba(0,0,0,0.05)] border-b border-white/50 transition-all">
         <div className="container mx-auto px-6 py-3 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <div className="relative group cursor-pointer bg-white rounded-full p-1.5 shadow-[0_5px_15px_rgba(249,115,22,0.2)] border border-orange-100 h-14 w-14 flex items-center justify-center">
+            <div className="relative group cursor-pointer bg-white rounded-full p-1.5 shadow-[0_5px_15px_rgba(37,99,235,0.2)] border border-blue-100 h-14 w-14 flex items-center justify-center">
                <img src={config.header?.logoUrl} onError={handleImageError} alt="Logo" className="h-full w-full rounded-full object-contain transform group-hover:scale-110 transition-transform duration-500" />
             </div>
-            <span className="font-extrabold text-2xl hidden sm:block text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-red-600 tracking-tighter">ISKCON</span>
+            <span className="font-extrabold text-2xl hidden sm:block text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-red-600 tracking-tighter">ISKCON</span>
           </div>
-          <div className="hidden md:flex gap-10 font-bold text-xs text-gray-600 tracking-[0.2em] uppercase">
+          <div className="hidden md:flex gap-10 font-bold text-xs text-gray-800 tracking-[0.2em] uppercase">
             {['home', 'about', 'events', 'highlights'].map((item) => (
-              <a key={item} href={`#${item}`} className="hover:text-orange-600 transition-colors relative group py-2">
+              <a key={item} href={`#${item}`} className="hover:text-blue-700 transition-colors relative group py-2">
                 {item}
-                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-orange-500 transition-all duration-300 group-hover:w-full rounded-full"></span>
+                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full rounded-full"></span>
               </a>
             ))}
           </div>
           <div className="flex gap-2">
-            <button onClick={() => setShowAdminLogin(true)} className="md:hidden text-gray-500 hover:text-orange-600 p-2 bg-white rounded-full shadow-sm"><Menu size={20} /></button>
-            <button onClick={() => setShowAdminLogin(true)} className={`hidden md:flex items-center justify-center h-12 w-12 rounded-full border-2 transition-all hover:shadow-lg ${(isAdmin || isBypassAdmin) ? 'text-green-500 border-green-500 bg-green-50 shadow-[0_0_20px_rgba(34,197,94,0.3)]' : 'text-gray-400 border-white bg-white hover:text-orange-500 hover:border-orange-200'}`} title="System Dashboard">
+            <button onClick={() => setShowAdminLogin(true)} className="md:hidden text-gray-700 hover:text-blue-600 p-2 bg-white rounded-full shadow-sm"><Menu size={20} /></button>
+            <button onClick={() => setShowAdminLogin(true)} className={`hidden md:flex items-center justify-center h-12 w-12 rounded-full border-2 transition-all hover:shadow-lg ${(isAdmin || isBypassAdmin) ? 'text-green-500 border-green-500 bg-green-50 shadow-[0_0_20px_rgba(34,197,94,0.3)]' : 'text-gray-500 border-white bg-white hover:text-blue-600 hover:border-blue-200'}`} title="System Dashboard">
               <Lock size={18} />
             </button>
           </div>
@@ -772,57 +744,61 @@ export default function App() {
           <div className="relative z-10 max-w-5xl mx-auto">
             <div className="inline-flex mb-6 px-6 py-2.5 rounded-full bg-white/90 backdrop-blur-xl border border-gray-100 shadow-sm animate-fade-in-up items-center gap-3">
               <span className="flex h-3 w-3 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-600"></span>
               </span>
-              <p className="text-orange-900 font-bold tracking-widest uppercase text-xs">{config.header?.orgName}</p>
+              <p className="text-gray-800 font-bold tracking-widest uppercase text-xs">{config.header?.orgName}</p>
             </div>
 
-            <h2 className="text-3xl md:text-5xl lg:text-8xl font-extrabold mb-6 md:mb-8 tracking-tighter drop-shadow-sm animate-fade-in-up leading-tight max-w-[95vw] mx-auto break-words" style={{ animationDelay: '0.1s' }}>
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-yellow-500 via-orange-600 to-red-700">
+            <h2 className="text-4xl md:text-6xl lg:text-8xl font-extrabold mb-6 md:mb-8 tracking-tighter drop-shadow-lg animate-fade-in-up leading-tight max-w-[95vw] mx-auto break-words" style={{ animationDelay: '0.1s' }}>
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-700 via-indigo-800 to-red-700">
                 {config.header?.eventName}
               </span>
             </h2>
 
+            {/* FIX: NEW HERO ANIMATION REPLACING THE 'I LOVE BHARAT' HEART */}
             <div className="my-10 transform hover:scale-[1.02] transition duration-700 ease-out z-20 relative">
-               <div className="inline-flex flex-wrap items-center justify-center gap-3 sm:gap-4 md:gap-6 bg-white/90 backdrop-blur-2xl p-6 md:p-8 rounded-[2rem] shadow-xl border border-white relative overflow-hidden group max-w-[95vw]">
-                  <div className="absolute -inset-20 bg-gradient-to-tr from-orange-400/20 via-white/0 to-green-400/20 blur-3xl group-hover:opacity-100 transition-opacity duration-1000 animate-spin-slow pointer-events-none opacity-50"></div>
+               <div className="inline-flex flex-col items-center justify-center gap-4 bg-white/80 backdrop-blur-xl p-8 md:p-10 rounded-[3rem] shadow-2xl border border-white/50 relative overflow-hidden group max-w-[95vw]">
+                  <div className="absolute -inset-20 bg-gradient-to-tr from-blue-400/20 via-orange-400/10 to-red-400/20 blur-3xl group-hover:opacity-100 transition-opacity duration-1000 animate-spin-slow pointer-events-none opacity-50"></div>
                   
-                  {/* FIX: Now connected to config.header.heroLeft and heroRight so it can be changed from the Admin Dashboard */}
-                  <span className="text-2xl sm:text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-b from-orange-400 to-orange-600 drop-shadow-sm z-10 uppercase">
-                    {config.header?.heroLeft || "BETTER YOUTH"}
-                  </span>
-                  
-                  <div className="relative mx-1 sm:mx-2 md:mx-4 z-10 flex flex-col items-center justify-center">
-                    <TriColorHeart className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 drop-shadow-md hover:scale-110 transition-transform duration-500 animate-pulse" />
+                  <div className="flex items-center gap-3 bg-gradient-to-r from-orange-100 to-red-100 px-6 py-2 rounded-full border border-orange-200 mb-2">
+                    <BookOpen className="text-orange-600 w-5 h-5 animate-pulse" />
+                    <span className="text-orange-800 font-bold tracking-widest text-xs uppercase">ज्ञान • भक्ति • अनुशासन</span>
                   </div>
-                  
-                  <span className="text-2xl sm:text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-b from-green-500 to-green-700 drop-shadow-sm z-10 uppercase">
-                    {config.header?.heroRight || "BETTER BHARAT"}
-                  </span>
 
+                  <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6 text-center">
+                      <span className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-br from-blue-700 to-blue-900 drop-shadow-sm z-10 uppercase tracking-tight">
+                        {config.header?.heroLeft || "BETTER YOUTH"}
+                      </span>
+                      
+                      <div className="hidden md:block w-2 h-12 bg-gradient-to-b from-orange-400 to-red-500 rounded-full rotate-12"></div>
+                      
+                      <span className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-br from-orange-500 to-red-600 drop-shadow-sm z-10 uppercase tracking-tight">
+                        {config.header?.heroRight || "BETTER BHARAT"}
+                      </span>
+                  </div>
                </div>
             </div>
 
-            <h3 className="text-lg md:text-2xl lg:text-3xl text-gray-800 font-bold mb-8 tracking-tight animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+            <h3 className="text-lg md:text-2xl lg:text-3xl text-gray-900 font-bold mb-8 tracking-tight animate-fade-in-up drop-shadow-sm" style={{ animationDelay: '0.2s' }}>
               "{config.header?.tagline}"
             </h3>
 
-            <div className="inline-flex items-center gap-4 bg-gray-900 text-white px-8 py-4 rounded-full font-bold shadow-xl hover:bg-orange-600 hover:shadow-orange-500/30 transition-all transform hover:-translate-y-1 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
-              <Users className="w-5 h-5 text-orange-400" />
+            <div className="inline-flex items-center gap-4 bg-gray-900 text-white px-8 py-4 rounded-full font-bold shadow-xl hover:bg-blue-700 hover:shadow-blue-600/30 transition-all transform hover:-translate-y-1 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+              <Users className="w-5 h-5 text-blue-400" />
               <span className="tracking-widest text-sm uppercase">{config.header?.subTagline}</span>
             </div>
           </div>
         </header>
 
         <section id="about" className="py-20 md:py-28 px-4 container mx-auto relative scroll-mt-24">
-          <div className="max-w-6xl mx-auto bg-white/90 backdrop-blur-3xl rounded-[3rem] p-8 md:p-14 shadow-xl border border-white relative overflow-hidden transition-all group">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-orange-400 rounded-full blur-[100px] opacity-10 group-hover:opacity-20 transition-opacity duration-700"></div>
+          <div className="max-w-6xl mx-auto bg-white/95 backdrop-blur-3xl rounded-[3rem] p-8 md:p-14 shadow-2xl border border-white relative overflow-hidden transition-all group">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500 rounded-full blur-[100px] opacity-10 group-hover:opacity-20 transition-opacity duration-700"></div>
 
             <div className="flex flex-col lg:flex-row gap-12 md:gap-16 items-center relative z-10">
                <div className="flex-1 space-y-6 md:space-y-8">
-                  <div className="inline-flex items-center gap-3 bg-white text-orange-600 px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest border border-orange-100 shadow-sm">
-                    <Sparkles size={16} className="text-orange-400" /> The Mission
+                  <div className="inline-flex items-center gap-3 bg-white text-blue-700 px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest border border-blue-100 shadow-sm">
+                    <Sparkles size={16} className="text-blue-500" /> The Mission
                   </div>
                   <h2 className="text-2xl md:text-4xl font-extrabold text-gray-900 leading-tight tracking-tight">
                     {config.about?.title}
@@ -839,7 +815,7 @@ export default function App() {
                         </div>
                      </div>
                      <div className="w-full bg-gray-100 h-4 rounded-full overflow-hidden relative z-10 shadow-inner p-1">
-                        <div className="bg-gradient-to-r from-orange-500 via-yellow-400 to-green-500 h-full rounded-full w-[100%] relative overflow-hidden shadow-sm">
+                        <div className="bg-gradient-to-r from-blue-600 via-red-500 to-green-500 h-full rounded-full w-[100%] relative overflow-hidden shadow-sm">
                            <div className="absolute inset-0 bg-white/30 w-full animate-pulse"></div>
                         </div>
                      </div>
@@ -848,9 +824,9 @@ export default function App() {
 
                <div className="flex-1 w-full grid grid-cols-1 gap-5">
                  {[
-                   { icon: <Calendar size={24} />, title: "Date", val: config.about?.date, color: "orange" },
-                   { icon: <Clock size={24} />, title: "Time", val: config.about?.time, color: "green" },
-                   { icon: <MapPin size={24} />, title: "Venue", val: config.about?.venue, color: "blue" }
+                   { icon: <Calendar size={24} />, title: "Date", val: config.about?.date, color: "blue" },
+                   { icon: <Clock size={24} />, title: "Time", val: config.about?.time, color: "red" },
+                   { icon: <MapPin size={24} />, title: "Venue", val: config.about?.venue, color: "orange" }
                  ].map((item, idx) => (
                    <div key={idx} className={`bg-white p-6 rounded-[2rem] border border-gray-50 flex items-center gap-6 hover:scale-[1.02] hover:shadow-xl transition-all duration-300 shadow-sm group/card relative overflow-hidden`}>
                       <div className={`absolute top-0 right-0 w-32 h-32 bg-${item.color}-400 rounded-full blur-[50px] opacity-10 group-hover/card:opacity-20 transition-opacity`}></div>
@@ -871,7 +847,7 @@ export default function App() {
         <section className="py-20 md:py-24 container mx-auto px-4">
            <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-center gap-12 md:gap-16">
               <div className="relative group">
-                 <div className="absolute -inset-6 bg-gradient-to-tr from-orange-400 via-white to-yellow-300 rounded-[3rem] rotate-6 transition-transform duration-700 group-hover:rotate-12 opacity-40 blur-2xl"></div>
+                 <div className="absolute -inset-6 bg-gradient-to-tr from-blue-400 via-white to-red-400 rounded-[3rem] rotate-6 transition-transform duration-700 group-hover:rotate-12 opacity-40 blur-2xl"></div>
                  <div className="relative h-64 w-64 md:h-80 md:w-80 bg-white p-4 rounded-[2.5rem] shadow-xl transition-transform duration-500 hover:scale-105" style={{ animationDelay: '0.2s', animationDuration: '4s', animationIterationCount: 'infinite', animationName: 'float' }}>
                    <div className="h-full w-full overflow-hidden rounded-[2rem] border-2 border-gray-50">
                      <img src={config.dedication?.imageUrl} onError={handleImageError} alt="Dedication" className="h-full w-full object-cover filter contrast-125 saturate-110" />
@@ -883,11 +859,11 @@ export default function App() {
               </div>
 
               <div className="text-center md:text-left flex-1 space-y-5">
-                <div className="h-2 w-20 bg-gradient-to-r from-orange-500 to-green-500 rounded-full mx-auto md:mx-0"></div>
+                <div className="h-2 w-20 bg-gradient-to-r from-blue-600 to-red-500 rounded-full mx-auto md:mx-0"></div>
                 <h2 className="text-3xl md:text-5xl font-extrabold text-gray-900 leading-tight tracking-tight">
                   {config.dedication?.name}
                 </h2>
-                <p className="text-lg md:text-xl text-gray-700 font-medium italic leading-relaxed">
+                <p className="text-lg md:text-xl text-gray-800 font-medium italic leading-relaxed">
                   "{config.dedication?.subtitle}"
                 </p>
               </div>
@@ -900,9 +876,9 @@ export default function App() {
            </div>
            <div className="container mx-auto px-4 relative z-10">
              <div className="text-center mb-16 md:mb-20">
-               <span className="text-orange-500 font-bold tracking-widest uppercase text-xs mb-3 block">Visual Journey</span>
+               <span className="text-blue-400 font-bold tracking-widest uppercase text-xs mb-3 block">Visual Journey</span>
                <h2 className="text-3xl md:text-5xl font-extrabold text-white tracking-tighter">Cultural Gallery</h2>
-               <div className="w-24 h-2 bg-gradient-to-r from-orange-500 via-yellow-500 to-green-500 mx-auto mt-6 rounded-full"></div>
+               <div className="w-24 h-2 bg-gradient-to-r from-blue-500 via-orange-500 to-red-500 mx-auto mt-6 rounded-full"></div>
              </div>
 
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 px-4 md:px-10 max-w-7xl mx-auto">
@@ -913,7 +889,7 @@ export default function App() {
                    <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-[2.5rem]"></div>
                    <div className="absolute bottom-0 left-0 w-full p-8 md:p-10">
                      <div className="transform translate-y-8 group-hover:translate-y-0 transition-transform duration-500 ease-out">
-                        <div className="w-12 h-1.5 bg-orange-500 mb-4 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100 shadow-[0_0_15px_rgba(249,115,22,0.8)]"></div>
+                        <div className="w-12 h-1.5 bg-blue-500 mb-4 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100 shadow-[0_0_15px_rgba(59,130,246,0.8)]"></div>
                         <h3 className="text-2xl font-extrabold text-white leading-tight drop-shadow-xl">{item.title}</h3>
                      </div>
                    </div>
@@ -989,7 +965,7 @@ export default function App() {
           <div className="bg-white/20 p-2 rounded-full group-hover:rotate-12 transition-transform shadow-inner"><CheckCircle size={20} /></div>
           <span className="tracking-widest">PLEDGE NOW</span>
         </button>
-        <button onClick={() => setShowAttendance(true)} className="flex-1 md:flex-none bg-gradient-to-r from-orange-500 to-red-600 text-white py-5 md:py-4 px-4 md:pl-6 md:pr-8 md:rounded-full font-extrabold text-sm flex items-center justify-center gap-3 transition-all shadow-xl hover:shadow-[0_10px_30px_rgba(249,115,22,0.4)] md:hover:-translate-x-2 group border-t border-white/20 md:border-none relative overflow-hidden">
+        <button onClick={() => setShowAttendance(true)} className="flex-1 md:flex-none bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-5 md:py-4 px-4 md:pl-6 md:pr-8 md:rounded-full font-extrabold text-sm flex items-center justify-center gap-3 transition-all shadow-xl hover:shadow-[0_10px_30px_rgba(67,56,202,0.4)] md:hover:-translate-x-2 group border-t border-white/20 md:border-none relative overflow-hidden">
           <div className="absolute inset-0 bg-white/20 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out"></div>
           <div className="bg-white/20 p-2 rounded-full group-hover:-rotate-12 transition-transform shadow-inner"><Ticket size={20} /></div>
           <span className="tracking-widest">ATTENDANCE</span>
@@ -1004,14 +980,14 @@ export default function App() {
                <div className="absolute -top-20 -left-20 w-48 h-48 bg-white/20 rounded-full blur-3xl pointer-events-none"></div>
                <div className="relative z-10">
                  <h3 className="text-3xl font-extrabold mb-2 drop-shadow-md">My Pledge</h3>
-                 <p className="text-emerald-100 font-bold tracking-widest uppercase text-xs">Nasha Mukt Bharat</p>
+                 <p className="text-emerald-100 font-bold tracking-widest uppercase text-xs">Better Youth, Better Bharat</p>
                </div>
             </div>
             <div className="p-8">
               {!pledgeTaken ? (
                 <form onSubmit={submitPledge} className="space-y-5">
-                  <div className="p-6 bg-orange-50 rounded-[1.5rem] border border-orange-100 text-center relative shadow-inner">
-                    <div className="text-orange-200 absolute top-2 left-4 text-5xl font-serif leading-none">"</div>
+                  <div className="p-6 bg-blue-50 rounded-[1.5rem] border border-blue-100 text-center relative shadow-inner">
+                    <div className="text-blue-200 absolute top-2 left-4 text-5xl font-serif leading-none">"</div>
                     <p className="text-gray-800 font-bold italic relative z-10 mb-3 leading-relaxed text-sm">{config.pledgeText?.english}</p>
                     <p className="text-gray-500 text-[10px] font-bold">{config.pledgeText?.hindi}</p>
                   </div>
@@ -1038,24 +1014,24 @@ export default function App() {
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-gray-950/80 backdrop-blur-2xl animate-fade-in">
           <div className="bg-white/95 backdrop-blur-xl rounded-[2.5rem] w-full max-w-md overflow-hidden shadow-2xl relative border border-white animate-scale-in">
             <button onClick={() => setShowAttendance(false)} className="absolute top-5 right-5 z-20 w-10 h-10 bg-black/10 hover:bg-black/30 rounded-full flex items-center justify-center transition text-white backdrop-blur-md"><X size={20} /></button>
-            <div className="relative bg-gradient-to-br from-orange-500 to-red-600 p-10 text-white text-center overflow-hidden">
+            <div className="relative bg-gradient-to-br from-blue-700 to-indigo-900 p-10 text-white text-center overflow-hidden">
               <div className="absolute -top-20 -left-20 w-48 h-48 bg-white/20 rounded-full blur-3xl pointer-events-none"></div>
               <h3 className="text-3xl font-extrabold relative z-10 mb-2 drop-shadow-md tracking-tight">Attendance</h3>
-              <p className="text-orange-100 font-bold uppercase tracking-widest text-xs relative z-10">Digital Prasadam Pass</p>
+              <p className="text-blue-100 font-bold uppercase tracking-widest text-xs relative z-10">Digital Prasadam Pass</p>
             </div>
             <form onSubmit={submitAttendance} className="p-8 space-y-4">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-2">Full Name</label>
-                <input required className="w-full p-4 bg-white border border-gray-200 rounded-2xl focus:ring-4 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition font-bold tracking-wide shadow-sm" value={attForm.name} onChange={e => setAttForm({...attForm, name: e.target.value})} />
+                <input required className="w-full p-4 bg-white border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition font-bold tracking-wide shadow-sm" value={attForm.name} onChange={e => setAttForm({...attForm, name: e.target.value})} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-2">Age</label>
-                   <input required type="number" className="w-full p-4 bg-white border border-gray-200 rounded-2xl focus:ring-4 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition font-bold tracking-wide shadow-sm" value={attForm.age} onChange={e => setAttForm({...attForm, age: e.target.value})} />
+                   <input required type="number" className="w-full p-4 bg-white border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition font-bold tracking-wide shadow-sm" value={attForm.age} onChange={e => setAttForm({...attForm, age: e.target.value})} />
                 </div>
                 <div className="space-y-1.5">
                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-2">Gender</label>
-                   <select className="w-full p-4 bg-white border border-gray-200 rounded-2xl focus:ring-4 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition font-bold tracking-wide text-gray-700 shadow-sm" value={attForm.gender} onChange={e => setAttForm({...attForm, gender: e.target.value})}>
+                   <select className="w-full p-4 bg-white border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition font-bold tracking-wide text-gray-700 shadow-sm" value={attForm.gender} onChange={e => setAttForm({...attForm, gender: e.target.value})}>
                      <option value="M">Male</option>
                      <option value="F">Female</option>
                    </select>
@@ -1063,14 +1039,15 @@ export default function App() {
               </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-2">Contact No.</label>
-                <input required type="tel" className="w-full p-4 bg-white border border-gray-200 rounded-2xl focus:ring-4 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition font-bold tracking-wide shadow-sm" value={attForm.contact} onChange={e => setAttForm({...attForm, contact: e.target.value})} />
+                <input required type="tel" className="w-full p-4 bg-white border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition font-bold tracking-wide shadow-sm" value={attForm.contact} onChange={e => setAttForm({...attForm, contact: e.target.value})} />
               </div>
-              <button type="submit" className="w-full mt-4 bg-gradient-to-r from-orange-500 to-red-600 text-white py-4 rounded-2xl font-extrabold tracking-widest shadow-[0_10px_20px_rgba(249,115,22,0.3)] transition transform hover:-translate-y-1">GENERATE PASS</button>
+              <button type="submit" className="w-full mt-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-4 rounded-2xl font-extrabold tracking-widest shadow-[0_10px_20px_rgba(67,56,202,0.3)] transition transform hover:-translate-y-1">GENERATE PASS</button>
             </form>
           </div>
         </div>
       )}
 
+      {/* FIX: DHURANDHAR THEMED PRASADAM PASS (BLUE, RED & GOLD) */}
       {showCoupon && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl">
            <div className="max-w-sm w-full relative animate-scale-in flex flex-col items-center">
@@ -1079,15 +1056,15 @@ export default function App() {
               
               <div id="entry-pass-card" className="w-full bg-transparent drop-shadow-2xl">
                 
-                <div className="bg-gradient-to-br from-orange-500 via-orange-600 to-red-600 rounded-t-[2rem] p-8 text-center relative overflow-hidden text-white shadow-lg border border-orange-400/50">
+                <div className="bg-gradient-to-br from-blue-800 via-indigo-900 to-red-900 rounded-t-[2rem] p-8 text-center relative overflow-hidden text-white shadow-lg border border-blue-400/50">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none transform translate-x-1/2 -translate-y-1/2"></div>
-                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-yellow-400/20 rounded-full blur-xl pointer-events-none transform -translate-x-1/2 translate-y-1/2"></div>
+                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-red-400/20 rounded-full blur-xl pointer-events-none transform -translate-x-1/2 translate-y-1/2"></div>
                   
                   <h3 className="font-extrabold text-3xl uppercase tracking-[0.2em] relative z-10 drop-shadow-md">ENTRY PASS</h3>
                   <div className="flex items-center justify-center gap-2 mt-2 opacity-90 relative z-10">
-                    <Sparkles size={12} className="text-yellow-300"/>
-                    <p className="text-[10px] font-bold tracking-[0.3em] text-yellow-100">OFFICIAL PRASADAM</p>
-                    <Sparkles size={12} className="text-yellow-300"/>
+                    <Sparkles size={12} className="text-orange-400"/>
+                    <p className="text-[10px] font-bold tracking-[0.3em] text-orange-200">OFFICIAL PRASADAM</p>
+                    <Sparkles size={12} className="text-orange-400"/>
                   </div>
                 </div>
 
@@ -1110,10 +1087,10 @@ export default function App() {
                       <span>{showCoupon.age} YRS</span>
                     </div>
 
-                    <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-2xl p-4 border border-orange-100 shadow-sm">
-                      <p className="text-[9px] font-bold text-orange-400 uppercase tracking-widest mb-1">Status</p>
-                      <div className="flex items-center justify-center gap-2 text-orange-600">
-                        <CheckCircle size={16} className="fill-current text-white bg-orange-600 rounded-full" />
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 border border-blue-100 shadow-sm">
+                      <p className="text-[9px] font-bold text-blue-500 uppercase tracking-widest mb-1">Status</p>
+                      <div className="flex items-center justify-center gap-2 text-blue-700">
+                        <CheckCircle size={16} className="fill-current text-white bg-blue-600 rounded-full" />
                         <p className="font-extrabold text-lg tracking-[0.2em]">AUTHORIZED</p>
                       </div>
                     </div>
@@ -1143,11 +1120,11 @@ export default function App() {
                       <path d="M10,0 h4 v40 h-4 z M18,0 h2 v40 h-2 z M24,0 h6 v40 h-6 z M34,0 h2 v40 h-2 z M40,0 h8 v40 h-8 z M52,0 h2 v40 h-2 z M58,0 h6 v40 h-6 z M68,0 h4 v40 h-4 z M76,0 h2 v40 h-2 z M82,0 h6 v40 h-6 z M92,0 h8 v40 h-8 z M104,0 h2 v40 h-2 z M110,0 h4 v40 h-4 z M118,0 h6 v40 h-6 z M128,0 h2 v40 h-2 z M134,0 h4 v40 h-4 z M142,0 h8 v40 h-8 z M154,0 h2 v40 h-2 z M160,0 h6 v40 h-6 z M170,0 h4 v40 h-4 z M178,0 h2 v40 h-2 z M184,0 h6 v40 h-6 z" fill="currentColor"/>
                     </svg>
                   </div>
-                  <p className="text-[8px] font-bold tracking-[0.4em] text-gray-400 uppercase">ILB-{Date.now().toString().slice(-6)}-{showCoupon.name.substring(0,2)}</p>
+                  <p className="text-[8px] font-bold tracking-[0.4em] text-gray-400 uppercase">DHUR-{Date.now().toString().slice(-6)}-{showCoupon.name.substring(0,2)}</p>
                 </div>
               </div>
 
-              <button onClick={downloadPass} className="mt-8 flex items-center gap-3 text-gray-900 font-extrabold transition px-8 py-4 bg-white hover:bg-orange-50 hover:text-orange-600 rounded-full w-auto justify-center tracking-[0.2em] text-xs shadow-[0_10px_30px_rgba(255,255,255,0.2)] transform hover:-translate-y-1">
+              <button onClick={downloadPass} className="mt-8 flex items-center gap-3 text-white font-extrabold transition px-8 py-4 bg-blue-600 hover:bg-blue-700 rounded-full w-auto justify-center tracking-[0.2em] text-xs shadow-[0_10px_30px_rgba(37,99,235,0.4)] transform hover:-translate-y-1 border border-blue-500">
                 <Download size={18} /> SAVE TO DEVICE
               </button>
            </div>
